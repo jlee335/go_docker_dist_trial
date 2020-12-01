@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"log"
+	"net/http"
 	"time"
 )
 
@@ -11,22 +13,35 @@ type Job struct {
 	terminate bool
 }
 
+//Function that initializes workers
+func init_workers(sender chan Job, reciever chan Job) {
+	go worker(sender, reciever)
+	go worker(sender, reciever)
+	go worker(sender, reciever)
+	go worker(sender, reciever)
+}
+
 func main() {
 	sender := make(chan Job, 100)
 	reciever := make(chan Job, 100)
 	//var wg sync.WaitGroup
 	//wg.Add(2)
+	init_workers(sender, reciever)
 
-	go worker(sender, reciever)
-	go worker(sender, reciever)
+	fmt.Printf("Starting server at port 8081\n")
 
-	for uid := 0; uid < 100; uid++ {
-		sender <- Job{calc: uid, uid: uid}
+	http.HandleFunc("/", calcHandler)
+	if err := http.ListenAndServe(":8081", nil); err != nil {
+		log.Fatal(err)
 	}
+}
 
-	for res := 0; res < 100; res++ {
-		fmt.Println(<-reciever)
+func calcHandler(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		fmt.Fprintf(w, "ParseForm() err: %v", err)
+		return
 	}
+	fmt.Fprintf(w, "pong from processing server")
 
 }
 
